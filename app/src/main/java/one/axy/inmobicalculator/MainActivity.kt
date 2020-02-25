@@ -5,7 +5,15 @@ import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.inmobi.ads.InMobiAdRequestStatus
+import com.inmobi.ads.InMobiBanner
+import com.inmobi.ads.InMobiInterstitial
+import com.inmobi.ads.listeners.BannerAdEventListener
+import com.inmobi.ads.listeners.InterstitialAdEventListener
+import com.inmobi.sdk.InMobiSdk
 import net.objecthunter.exp4j.ExpressionBuilder
+import org.json.JSONException
+import org.json.JSONObject
 
 
 class MainActivity : AppCompatActivity() {
@@ -22,10 +30,42 @@ class MainActivity : AppCompatActivity() {
     // If true, do not allow to add another DOT
     var lastDot: Boolean = false
 
+    lateinit var interstitialAd : InMobiInterstitial
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        var consentObject: JSONObject = JSONObject()
+        try {
+            // Provide correct consent value to sdk which is obtained by User
+//            consentObject.put(InMobiSdk.IM_GDPR_CONSENT_AVAILABLE, true);
+            // Provide 0 if GDPR is not applicable and 1 if applicable
+            consentObject.put("gdpr", "0")
+            // Provide user consent in IAB format
+//            consentObject.put(InMobiSdk.IM_GDPR_CONSENT_IAB, “<<consent in IAB format>>”);
+        } catch (e: JSONException) {
+            e.printStackTrace()
+        }
+        InMobiSdk.init(this, "07bbd7266ce348028a5669f9896a79ee", consentObject)
+//        InMobiSdk.setLocationWithCityStateCountry("Bangalore", "Karantaka", "India")
+        InMobiSdk.setLogLevel(InMobiSdk.LogLevel.DEBUG)
+        var myBannerAdEventListener = MyBannerAdEventListener()
+
+        var mInterstitialAdEventListener = MyInterstitialAdEventListener()
+
+        interstitialAd = InMobiInterstitial(
+            this@MainActivity,
+            1582132586349L,
+            mInterstitialAdEventListener
+        )
+        interstitialAd.load()
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         txtInput = findViewById(R.id.txtInput)
+
+        val bannerAd = findViewById(R.id.banner) as InMobiBanner
+        bannerAd.setListener(myBannerAdEventListener)
+        bannerAd.setAnimationType(InMobiBanner.AnimationType.ROTATE_HORIZONTAL_AXIS)
+        bannerAd.load()
     }
 
     /**
@@ -81,6 +121,8 @@ class MainActivity : AppCompatActivity() {
      * Calculate the output using Exp4j
      */
     fun onEqual(view: View) {
+        interstitialAd.show()
+
         // If the current state is error, nothing to do.
         // If the last input is a number only, solution can be found.
         if (lastNumeric && !stateError) {
@@ -100,5 +142,31 @@ class MainActivity : AppCompatActivity() {
                 lastNumeric = false
             }
         }
+    }
+}
+
+class MyBannerAdEventListener : BannerAdEventListener() {
+    override fun onAdLoadFailed(p0: InMobiBanner?, p1: InMobiAdRequestStatus?) {
+        println("Banner----------------------------------")
+        println(p1?.statusCode)
+        println(p1?.message)
+        println("----------------------------------")
+    }
+
+    override fun onAdLoadSucceeded(p0: InMobiBanner?) {
+        println("Banner++++++++++++++++++++++++++++++++++")
+    }
+}
+
+class MyInterstitialAdEventListener : InterstitialAdEventListener() {
+    override fun onAdLoadFailed(p0: InMobiInterstitial?, p1: InMobiAdRequestStatus?) {
+        println("Interstitial++++++++++++++++++++++++++++++++++")
+        println(p1?.statusCode)
+        println(p1?.message)
+        println("++++++++++++++++++++++++++++++++++")
+    }
+
+    override fun onAdLoadSucceeded(p0: InMobiInterstitial?) {
+        println("Interstitial++++++++++++++++++++++++++++++++++")
     }
 }
