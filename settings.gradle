@@ -1,0 +1,2 @@
+rootProject.name='InMobi Calculator'
+include ':app'
