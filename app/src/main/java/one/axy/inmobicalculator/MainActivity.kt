@@ -19,38 +19,97 @@ import org.json.JSONObject
 class MainActivity : AppCompatActivity() {
 
     // TextView used to display the input and output
-    lateinit var txtInput: TextView
+    private lateinit var txtInput: TextView
 
     // Represent whether the lastly pressed key is numeric or not
-    var lastNumeric: Boolean = false
+    private var lastNumeric: Boolean = false
 
     // Represent that current state is in error or not
-    var stateError: Boolean = false
+    private var stateError: Boolean = false
 
     // If true, do not allow to add another DOT
-    var lastDot: Boolean = false
+    private var lastDot: Boolean = false
 
-    lateinit var interstitialAd : InMobiInterstitial
+    inner class MyBannerAdEventListener : BannerAdEventListener() {
+
+        override fun onAdClicked(p0: InMobiBanner?, p1: MutableMap<Any, Any>?) {
+            println("Banner clicked - yayyyyy, monies")
+            println(p1)
+            p0?.load()
+        }
+
+        override fun onAdLoadFailed(p0: InMobiBanner?, p1: InMobiAdRequestStatus?) {
+            println("Banner load failed")
+            println(p1?.statusCode)
+            println(p1?.message)
+            p0?.load()
+        }
+
+        override fun onAdLoadSucceeded(p0: InMobiBanner?) {
+            println("Banner load succeeded")
+        }
+
+    }
+
+    inner class MyInterstitialAdEventListener : InterstitialAdEventListener() {
+
+        override fun onAdClicked(p0: InMobiInterstitial?, p1: MutableMap<Any, Any>?) {
+            println("Interstitial clicked - yayyyyy, more monies")
+            println(p1)
+            interstitialAdLoaded = false
+            p0?.load()
+            evaluate()
+        }
+
+        override fun onAdDisplayFailed(p0: InMobiInterstitial?) {
+            println("Interstitial failed to display")
+            interstitialAdLoaded = false
+            p0?.load()
+            evaluate()
+        }
+
+        override fun onAdDismissed(p0: InMobiInterstitial?) {
+            println("Interstitial dismissed")
+            interstitialAdLoaded = false
+            p0?.load()
+            evaluate()
+        }
+
+        override fun onAdLoadFailed(p0: InMobiInterstitial?, p1: InMobiAdRequestStatus?) {
+            println("Interstitial load failed")
+            println(p1?.statusCode)
+            println(p1?.message)
+            interstitialAdLoaded = false
+            p0?.load()
+        }
+
+        override fun onAdLoadSucceeded(p0: InMobiInterstitial?) {
+            println("Interstitial load succeeded")
+            interstitialAdLoaded = true
+        }
+
+    }
+
+    private lateinit var interstitialAd : InMobiInterstitial
+    private lateinit var mInterstitialAdEventListener: InterstitialAdEventListener
+    private var interstitialAdLoaded: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        var consentObject: JSONObject = JSONObject()
+        val consentObject = JSONObject()
         try {
-            // Provide correct consent value to sdk which is obtained by User
-//            consentObject.put(InMobiSdk.IM_GDPR_CONSENT_AVAILABLE, true);
-            // Provide 0 if GDPR is not applicable and 1 if applicable
             consentObject.put("gdpr", "0")
-            // Provide user consent in IAB format
-//            consentObject.put(InMobiSdk.IM_GDPR_CONSENT_IAB, “<<consent in IAB format>>”);
         } catch (e: JSONException) {
             e.printStackTrace()
         }
         InMobiSdk.init(this, "07bbd7266ce348028a5669f9896a79ee", consentObject)
-//        InMobiSdk.setLocationWithCityStateCountry("Bangalore", "Karantaka", "India")
         InMobiSdk.setLogLevel(InMobiSdk.LogLevel.DEBUG)
-        var myBannerAdEventListener = MyBannerAdEventListener()
 
-        var mInterstitialAdEventListener = MyInterstitialAdEventListener()
+        super.onCreate(savedInstanceState)
 
+        setContentView(R.layout.activity_main)
+        txtInput = findViewById(R.id.txtInput)
+
+        mInterstitialAdEventListener = MyInterstitialAdEventListener()
         interstitialAd = InMobiInterstitial(
             this@MainActivity,
             1582132586349L,
@@ -58,12 +117,9 @@ class MainActivity : AppCompatActivity() {
         )
         interstitialAd.load()
 
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        txtInput = findViewById(R.id.txtInput)
-
-        val bannerAd = findViewById(R.id.banner) as InMobiBanner
-        bannerAd.setListener(myBannerAdEventListener)
+        val mBannerAdEventListener = MyBannerAdEventListener()
+        val bannerAd = findViewById<InMobiBanner>(R.id.banner)
+        bannerAd.setListener(mBannerAdEventListener)
         bannerAd.setAnimationType(InMobiBanner.AnimationType.ROTATE_HORIZONTAL_AXIS)
         bannerAd.load()
     }
@@ -117,12 +173,17 @@ class MainActivity : AppCompatActivity() {
         lastDot = false
     }
 
+    fun onEqual(view: View) {
+        if (interstitialAdLoaded)
+            interstitialAd.show()
+        else
+            evaluate()
+    }
+
     /**
      * Calculate the output using Exp4j
      */
-    fun onEqual(view: View) {
-        interstitialAd.show()
-
+    fun evaluate() {
         // If the current state is error, nothing to do.
         // If the last input is a number only, solution can be found.
         if (lastNumeric && !stateError) {
@@ -142,31 +203,5 @@ class MainActivity : AppCompatActivity() {
                 lastNumeric = false
             }
         }
-    }
-}
-
-class MyBannerAdEventListener : BannerAdEventListener() {
-    override fun onAdLoadFailed(p0: InMobiBanner?, p1: InMobiAdRequestStatus?) {
-        println("Banner----------------------------------")
-        println(p1?.statusCode)
-        println(p1?.message)
-        println("----------------------------------")
-    }
-
-    override fun onAdLoadSucceeded(p0: InMobiBanner?) {
-        println("Banner++++++++++++++++++++++++++++++++++")
-    }
-}
-
-class MyInterstitialAdEventListener : InterstitialAdEventListener() {
-    override fun onAdLoadFailed(p0: InMobiInterstitial?, p1: InMobiAdRequestStatus?) {
-        println("Interstitial++++++++++++++++++++++++++++++++++")
-        println(p1?.statusCode)
-        println(p1?.message)
-        println("++++++++++++++++++++++++++++++++++")
-    }
-
-    override fun onAdLoadSucceeded(p0: InMobiInterstitial?) {
-        println("Interstitial++++++++++++++++++++++++++++++++++")
     }
 }
